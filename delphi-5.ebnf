@@ -1,0 +1,8 @@
+
+Label = Identifier | IntegerLabel;
+
+IntegerLabel = [0-9]{1,4};
+
+Identifier = [_a-zA-Z][_a-zA-Z0-9]*;
+
+string = (#([0-9]{1,3}))+|'(''|[^'])*';
