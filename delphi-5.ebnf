@@ -1,31 +1,131 @@
-string = (#([0-9]{1,3}))+|'(''|[^'])*';
+(* Delphi 5 Grammar *)
 
-Label = Identifier | IntegerLabel;
+class-type = 'class'
+           , [ class-heritage ]
+           , class-field-list
+           , class-method-list
+           , class-property-list
+           , 'end'
+           ;
 
-IntegerLabel = [0-9]{1,4};
+class-heritage = '(', identifier-list, ')';
 
-Identifier = ( _ | Letter ), { _ | AlphaNumeric };
+class-visibility = 'public'
+                 | 'protected'
+                 | 'private'
+                 | 'published'
+                 ;
 
-AlphaNumeric = Digit | Letter;
+class-field-list = class-field, { class-field };
 
-Letter = LowerCaseLetter | UpperCaseLetter;
+class-field = [ class-visibility ]
+            , object-field
+            , ';'
+            ;
 
-LowerCaseLetter = a | b | c | d | e | f
-                | g | h | i | j | k | l 
-                | m | n | o | p | q | r 
-                | s | t | u | v | w | x 
-                | y | z ;
+class-method = [ class-visibility ]
+             , method-list
+             , ';'
+             ;
 
-UpperCaseLetter = A | B | C | D | E | F
-                | G | H | I | J | K | L 
-                | M | N | O | P | Q | R 
-                | S | T | U | V | W | X 
-                | Y | Z ;
+class-method-list = class-method, { class-method };
 
-CharacterConstant = #ByteValue;
+class-property-list = class-property, { class-property };
 
-ByteValue = ( 0 | 1 ), Digit, Digit
-          | 2, ( 0 | 1 | 2 | 3 | 4 ), Digit
-          | 2, 5, ( 0 | 1 | 2 | 3 | 4 | 5 );
+class-property = [ class-visibility ]
+               , property-list
+               , ';'
+               ;
 
-Digit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+property-list = 'property'
+              , identifier
+              , [ property-interface ]
+              , property-specifiers
+              ;
+
+property-interface = [ property-parameter-list ]
+                   , ':'
+                   , identifier
+                   ;
+
+property-parameter-list = '['
+                        , identifier-list
+                        , ':'
+                        , type-id
+                        , ';'
+                        , { identifier-list, ':', type-id }
+                        , ']'
+                        ;
+
+property-specifiers = [ 'index', const-expr ]
+                    , [ 'read', identifier ]
+                    , [ 'write', identifier ]
+                    , [ 'stored', (identifier | constant) ]
+                    , [ ('default', const-expr) | 'nodefault' ]
+                    , [ 'implements', type-id ]
+                    ;
+
+interface-type = 'interface'
+               , [ interface-heritage ],
+               , [ class-method-list ]
+               , [ class-property-list ]
+               , 'end'
+               ;
+
+interface-heritage = '('
+                   , identifier-list
+                   , ')'
+                   ;
+
+requires-clause = 'requires'
+                , identifier-list
+                , ';'
+                ;
+
+contains-clause = 'contains'
+                , identifier-list
+                , ';'
+                ;
+
+label-id = identifier | integer-label;
+
+integer-label = digit, { digit };
+
+identifier-list = identifier, { ',', identifier };
+
+identifier = ('_' | letter), { '_' | alphanumeric };
+
+alphanumeric = digit | letter;
+
+string = string-constant | "'", { character - "'" }, "'"; (* this is wrong :( *)
+
+string-constant = character-constant, { character-constant };
+
+character-constant = #, digit, { digit };
+
+hexadecimal = '$', hexadecimal-digit, { hexadecimal-digit };
+
+hexadecimal-digit = digit
+                  | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' 
+                  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+                  ;
+
+integer = digit, { digit };
+
+digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+
+letter = lower-case-letter | upper-case-letter;
+
+lower-case-letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+                  | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' 
+                  | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' 
+                  | 's' | 't' | 'u' | 'v' | 'w' | 'x' 
+                  | 'y' | 'z' ;
+
+upper-case-letter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+                  | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' 
+                  | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' 
+                  | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' 
+                  | 'Y' | 'Z' ;
+
+character = ? any character ?;
