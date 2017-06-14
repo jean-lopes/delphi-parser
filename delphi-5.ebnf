@@ -1,81 +1,58 @@
 (* Delphi 5 Grammar *)
 
-class-type = 'class'
-           , [ class-heritage ]
-           , class-field-list
-           , class-method-list
-           , class-property-list
-           , 'end'
-           ;
+character = ? any character ?;
 
-class-heritage = '(', identifier-list, ')';
+upper-case-letter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+                  | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' 
+                  | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' 
+                  | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' 
+                  | 'Y' | 'Z' ;
 
-class-visibility = 'public'
-                 | 'protected'
-                 | 'private'
-                 | 'published'
-                 ;
+lower-case-letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+                  | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' 
+                  | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' 
+                  | 's' | 't' | 'u' | 'v' | 'w' | 'x' 
+                  | 'y' | 'z' ;                  
 
-class-field-list = class-field, { class-field };
+letter = lower-case-letter | upper-case-letter;
 
-class-field = [ class-visibility ]
-            , object-field
-            , ';'
-            ;
+digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
-class-method = [ class-visibility ]
-             , method-list
-             , ';'
-             ;
+sign = '+' | '-';
 
-class-method-list = class-method, { class-method };
+integer = digit, { digit };
 
-class-property-list = class-property, { class-property };
+hexadecimal-digit = digit
+                  | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' 
+                  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+                  ;
 
-class-property = [ class-visibility ]
-               , property-list
-               , ';'
-               ;
+hexadecimal = '$', hexadecimal-digit, { hexadecimal-digit };
 
-property-list = 'property'
-              , identifier
-              , [ property-interface ]
-              , property-specifiers
-              ;
+real = integer, [ '.', integer ];
 
-property-interface = [ property-parameter-list ]
-                   , ':'
-                   , identifier
-                   ;
+scientific = real, ('e' | 'E'), [ sign ], integer;
 
-property-parameter-list = '['
-                        , identifier-list
-                        , ':'
-                        , type-id
-                        , ';'
-                        , { identifier-list, ':', type-id }
-                        , ']'
-                        ;
+number = { sign }, ( integer | hexadecimal | real | scientific );
 
-property-specifiers = [ 'index', const-expr ]
-                    , [ 'read', identifier ]
-                    , [ 'write', identifier ]
-                    , [ 'stored', (identifier | constant) ]
-                    , [ ('default', const-expr) | 'nodefault' ]
-                    , [ 'implements', type-id ]
-                    ;
+character-constant = #, digit, { digit };
 
-interface-type = 'interface'
-               , [ interface-heritage ],
-               , [ class-method-list ]
-               , [ class-property-list ]
-               , 'end'
-               ;
+string = character-constant, { character-constant }
+       | "'", { character - "'" }, "'"; (* this is wrong :( *)
 
-interface-heritage = '('
-                   , identifier-list
-                   , ')'
-                   ;
+alphanumeric = digit | letter;
+
+identifier = ('_' | letter), { '_' | alphanumeric };
+
+identifier-list = identifier, { ',', identifier };
+
+label-id = identifier | integer;
+
+unit-id = identifier;
+
+qualified-identifier = [ unit-id, '.' ], identifier;
+
+type-id = [ unit-id, '.' ], identifier;
 
 requires-clause = 'requires'
                 , identifier-list
@@ -87,45 +64,80 @@ contains-clause = 'contains'
                 , ';'
                 ;
 
-label-id = identifier | integer-label;
+interface-heritage = '('
+                   , identifier-list
+                   , ')'
+                   ;
 
-integer-label = digit, { digit };
+class-visibility = 'public'
+                 | 'protected'
+                 | 'private'
+                 | 'published'
+                 ;
 
-identifier-list = identifier, { ',', identifier };
+property-specifiers = [ 'index', const-expr ]
+                    , [ 'read', identifier ]
+                    , [ 'write', identifier ]
+                    , [ 'stored', (identifier | <<<constant>>>) ]
+                    , [ ('default', const-expr) | 'nodefault' ]
+                    , [ 'implements', type-id ]
+                    ;
 
-identifier = ('_' | letter), { '_' | alphanumeric };
+property-parameter-list = '['
+                        , identifier-list
+                        , ':'
+                        , type-id
+                        , ';'
+                        , { identifier-list, ':', type-id }
+                        , ']'
+                        ;
 
-alphanumeric = digit | letter;
+property-interface = [ property-parameter-list ]
+                   , ':'
+                   , identifier
+                   ;
 
-string = string-constant | "'", { character - "'" }, "'"; (* this is wrong :( *)
+property-list = 'property'
+              , identifier
+              , [ property-interface ]
+              , property-specifiers
+              ;
 
-string-constant = character-constant, { character-constant };
+class-property = [ class-visibility ]
+               , property-list
+               , ';'
+               ;
 
-character-constant = #, digit, { digit };
+class-property-list = class-property, { class-property };
 
-hexadecimal = '$', hexadecimal-digit, { hexadecimal-digit };
+class-heritage = '(', identifier-list, ')';
 
-hexadecimal-digit = digit
-                  | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' 
-                  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
-                  ;
+--------------------------------------------------------------------------------
+class-field = [ class-visibility ]
+            , <<<object-field>>>
+            , ';'
+            ;
 
-integer = digit, { digit };
+class-field-list = class-field, { class-field };
 
-digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+class-method = [ class-visibility ]
+             , <<<method-list>>>
+             , ';'
+             ;
 
-letter = lower-case-letter | upper-case-letter;
+class-method-list = class-method, { class-method };
 
-lower-case-letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
-                  | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' 
-                  | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' 
-                  | 's' | 't' | 'u' | 'v' | 'w' | 'x' 
-                  | 'y' | 'z' ;
+interface-type = 'interface'
+               , [ interface-heritage ],
+               , [ class-method-list ]
+               , [ class-property-list ]
+               , 'end'
+               ;
 
-upper-case-letter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
-                  | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' 
-                  | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' 
-                  | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' 
-                  | 'Y' | 'Z' ;
-
-character = ? any character ?;
+class-type = 'class'
+           , [ class-heritage ]
+           , class-field-list
+           , class-method-list
+           , class-property-list
+           , 'end'
+           ;
