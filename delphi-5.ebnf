@@ -38,7 +38,7 @@ number = { sign }, ( integer | hexadecimal | real | scientific );
 character-constant = #, digit, { digit };
 
 string = character-constant, { character-constant }
-       | "'", { character - "'" }, "'"; (* this is wrong :( *)
+       | "'", { (character - "'") | "''" }, "'";
 
 alphanumeric = digit | letter;
 
@@ -63,11 +63,6 @@ contains-clause = 'contains'
                 , identifier-list
                 , ';'
                 ;
-
-interface-heritage = '('
-                   , identifier-list
-                   , ')'
-                   ;
 
 class-visibility = 'public'
                  | 'protected'
@@ -109,6 +104,8 @@ class-property = [ class-visibility ]
                ;
 
 class-property-list = class-property, { class-property };
+
+interface-heritage = '(', identifier-list, ')';
 
 class-heritage = '(', identifier-list, ')';
 

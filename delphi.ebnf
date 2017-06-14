@@ -1,0 +1,47 @@
+constant-expression = constant-simple-expression, { RelOp - ('IN' | 'IS' | 'AS') };
+
+constant-simple-expression = [ '+' | '-' ], constant-term, [ add-op, constant-term ];
+
+constant-term = constant-factor, [ mul-op, constant-factor ];
+
+constant-factor = ;
+
+Factor -> Designator ['(' ExprList ')']
+       -> '' Designator
+       -> Number
+       -> String
+       -> NIL
+       -> '(' Expression ')'
+       -> NOT Factor
+       -> SetConstructor
+       -> TypeId '(' Expression ')'
+
+RelOp -> '>'
+      -> '<'
+      -> '<='
+      -> '>='
+      -> '<>'
+      -> IN
+      -> IS
+      -> AS
+
+AddOp -> '+'
+      -> '-'
+      -> OR
+      -> XOR
+
+MulOp -> '*'
+      -> '/'
+      -> DIV
+      -> MOD
+      -> AND
+      -> SHL
+      -> SHR
+
+Designator -> QualId [ '.' Ident | '[' ExprList ']' | '^' ]...
+
+SetConstructor -> '[' [SetElement/','...] ']'
+
+SetElement -> Expression ['..' Expression]
+
+ExprList -> Expression/','...
