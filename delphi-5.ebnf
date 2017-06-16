@@ -1,20 +1,15 @@
-(* Delphi 5 Grammar *)
+(* Delphi 5 Grammar 
+Everything is case-insensitive in delphi, thus, the EBNF will only show
+lower-case letters.
+*)
 
 character = ? any character ?;
 
-upper-case-letter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
-                  | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' 
-                  | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' 
-                  | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' 
-                  | 'Y' | 'Z' ;
-
-lower-case-letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
-                  | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' 
-                  | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' 
-                  | 's' | 't' | 'u' | 'v' | 'w' | 'x' 
-                  | 'y' | 'z' ;                  
-
-letter = lower-case-letter | upper-case-letter;
+letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+       | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' 
+       | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' 
+       | 's' | 't' | 'u' | 'v' | 'w' | 'x' 
+       | 'y' | 'z' ;   
 
 digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
@@ -35,7 +30,7 @@ scientific = real, ('e' | 'E'), [ sign ], integer;
 
 number = { sign }, ( integer | hexadecimal | real | scientific );
 
-character-constant = #, digit, { digit };
+character-constant = '#', digit, { digit };
 
 string = character-constant, { character-constant }
        | "'", { (character - "'") | "''" }, "'";
@@ -62,10 +57,15 @@ class-visibility = 'public'
                  | 'published'
                  ;
 
+constant = number
+         | string
+         | 'True'
+         | 'False';
+
 property-specifiers = [ 'index', const-expr ]
                     , [ 'read', identifier ]
                     , [ 'write', identifier ]
-                    , [ 'stored', (identifier | <<<constant>>>) ]
+                    , [ 'stored', (identifier | constant) ]
                     , [ ('default', const-expr) | 'nodefault' ]
                     , [ 'implements', type-id ]
                     ;

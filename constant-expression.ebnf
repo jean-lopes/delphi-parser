@@ -1,0 +1,25 @@
+constant-expression = constant-simple-expression, { rel-op - ('IN' | 'IS' | 'AS') };
+
+constant-simple-expression = [ '+' | '-' ], constant-term, [ add-op, constant-term ];
+
+constant-term = constant-factor, [ mul-op, constant-factor ];
+
+constant-factor = constant-designator, [ '(', constant-expression-list, ')' ]
+                | ? '' Designator !!! Não foi convertido ainda?  
+                | number
+                | string
+                | 'nil'
+                | '(', constant-expression, ')'
+                | 'not', constant-factor
+                | constant-set-constructor
+                | type-id, '(', constant-expression, ')'
+                ;
+
+constant-designator = qualified-identifier
+                    , { '.', identifier | '[', expression-list, ']' | '^', };
+
+constant-set-constructor = '[', [ constant-set-element, { ',', constant-set-element } ], ']';
+
+constant-set-element = constant-expression, [ '..', constant-expression ];
+
+constant-expression-list = constant-expression, { ',', constant-expression };

@@ -1,76 +1,218 @@
-{- | sadsa
--}
+-- |
+-- Module      : Language.Delphi.AST
+-- Description : Delphi Abstract Syntax Tree representation
+-- Copyright   : (c) Jean Carlo Giambastiani Lopes, 2017
+-- License     : MIT
+-- Maintainer  : jean.lopes@hotmail.com.br
+-- Stability   : experimental
+--
+-- = Abstract Syntax Tree
+-- 
+-- Everything is __case-insensitive__ in delphi, thus, the EBNF will only show
+-- lower-case letters.
+-- 
+-- this module is supposed to be imported qualified, suggested alias:
+-- 
+-- > import qualified Language.Delphi.AST as Delphi
+-- 
+-- /Base EBNF:/
+-- 
+-- >character = ? any character ?;
+-- >            
+-- >letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+-- >       | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' 
+-- >       | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' 
+-- >       | 's' | 't' | 'u' | 'v' | 'w' | 'x' 
+-- >       | 'y' | 'z' ;
+-- >
+-- >digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+-- >
+-- >sign = '+' | '-';
+-- >
+-- >class-visibility = 'public'
+-- >                 | 'protected'
+-- >                 | 'private'
+-- >                 | 'published'
+-- >                 ;
+-- >
+-- >ordinal-identifier = 'shortint'
+-- >                   | 'smallint'
+-- >                   | 'integer'
+-- >                   | 'byte'
+-- >                   | 'longint'
+-- >                   | 'int64'
+-- >                   | 'word'
+-- >                   | 'boolean'
+-- >                   | 'char'
+-- >                   | 'widechar'
+-- >                   | 'longword'
+-- >                   | 'pchar'
+-- >                   ;
+-- >
+-- >real-type = 'real48'
+-- >          | 'real'
+-- >          | 'single'
+-- >          | 'double'
+-- >          | 'extended'
+-- >          | 'currency'
+-- >          | 'comp'
+-- >          ;
+-- >
+-- >variant-type = 'variant' | 'olevariant' ;
+-- >
+-- >directive = 'cddecl'
+-- >          | 'register'
+-- >          | 'dynamic'
+-- >          | 'virtual'
+-- >          | 'export'
+-- >          | 'external'
+-- >          | 'far'
+-- >          | 'forward'
+-- >          | 'message'
+-- >          | 'override'
+-- >          | 'overload'
+-- >          | 'pascal'
+-- >          | 'reintroduce'
+-- >          | 'safecall'
+-- >          | 'stdcall'
+-- >          ;
+-- >
+-- >rel-op = '>' | '<' | '<=' | '>=' | '<>' | 'IN' | 'IS' | 'AS' ;
+-- >
+-- >add-op = '+' | '-' | 'or' | 'xor' ;
+-- >
+-- >mul-op = '*' | '/' | 'div' | 'mod' | 'and' | 'shl' | 'shr' ;
+-- >
+-- >boolean = 'true' | 'false' ;
 module Language.Delphi.AST
 where
+import Prelude hiding (String)
+import Data.Word (Word8)
 import qualified Data.Text as T
 
-
-{- |
-    Integer and real constants can be represented in decimal notation
-as sequences of digits without commas or spaces, and prefixed with
-the + or – operator to indicate sign.
-
-    Values default to positive (so that, for example, 67258 is equivalent
-to +67258) and must be within the range of the largest predefined real or
-integer type.
-
-Numerals with decimal points or exponents denote reals, while other numerals
-denote integers. When the character E or e occurs within a real,
-it means “times ten to the power of”. For example, 7E–2 means 7  10^–2,
-and 12.25e+6 and 12.25e6 both mean 12.25  10^6.
-
-The dollar-sign prefix indicates a hexadecimal numeral—for example, $8F.
-The sign of a hexadecimal is determined by the leftmost (most significant) bit
-of its binary representation. /Source: Delphi help/
-
-/EBNF:/
-
-@
-    Sign = (\\+|-)?
-
-    Integer = [0-9]+
-
-    Hexadecimal = \\$[0-9a-fA-F]+
-
-    Decimal = [0-9]+\\.[0-9]+
-
-    Exponent = [eE](\\+|-)[0-9]+
-
-    Number = Hexadecimal
-           | (Sign) ( Integer | Decimal ) Exponent
-           | (Sign) Decimal
-           | (Sign) Integer
-@
--}
+-- | /EBNF:/
+--
+-- >integer = digit, { digit };
+-- >
+-- >hexadecimal-digit = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f';
+-- >
+-- >hexadecimal = '$', hexadecimal-digit, { hexadecimal-digit };
+-- >
+-- >real = integer, '.', integer;
+-- >
+-- >scientific = real, 'e', [ sign ], integer;
+-- >
+-- >number = { sign }, ( hexadecimal | scientific | real | integer );
 data Number
-    -- | Hexadecimal number, valid range: @$8000000000000000@ to @$7FFFFFFFFFFFFFFF@
-    = Hexadecimal !Integer
-    -- | Scientific notation for a real number: valid range: @19E-4932@ to @19E+4932@
-    -- Scientific !Rational
-    -- | Real number, valid range: @19E-4932@ to @19E+4932@
-    -- Real' !Rational
-    -- | Integer number, valid range: @-9223372036854775808@ to @9223372036854775807@
-    | Integer' !Integer
+    -- | Hexadecimal number, examples:
+    --
+    -- > $1, $FF, -$1
+    = Hexadecimal !Int
+    -- | Scientific notation for a real number, examples:
+    --
+    -- > 1E7, 1.2E-4, 1E+1, -1E3
+    | Scientific !Double
+    -- | Real number, examples:
+    --
+    -- > 1.0, 1.5, 0.5, -1.5
+    | Real !Double
+    -- | Integer number, examples:
+    -- 
+    -- > 1, 2, 3, -1, -15
+    | Integer !Int
     deriving Show
 
-{- |
-    Identifiers denote constants, variables, fields, types, properties,
-procedures, functions, programs, units, libraries, and packages.
+-- | /EBNF:/
+--
+-- >character-constant = '#', digit, { digit };
+-- >
+-- > string-constant = character-constant, { character-constant };
+-- >
+-- > string-literal = "'", { (character - "'") | "''" }, "'";
+-- > 
+-- > any-string = string-constant | string-literal;
+-- >
+-- > string = any-string, { any-string };
+data String 
+    -- | A String composed from byte values, examples:
+    --
+    -- > #65       -> A
+    -- > #89       -> Y
+    -- > #65#89#89 -> AYY
+    = StringConstant [Word8]
+    -- | A String literal, is your common quoted string, the only escaped
+    --   character is the apostrophe, examples:
+    --
+    -- > ''     -> (null)
+    -- > 'AYY'  -> AYY
+    -- > ''''   -> '    
+    -- > 'I''m' -> I'm
+    | StringLiteral !T.Text
+    -- | The string types can be mixed, hence this constructor, examples:
+    --
+    -- > 'AYYY'#32'LMAO' -> Strings [ StringLiteral ""
+    -- >                            , StringConstant [32]
+    -- >                            , StringLiteral ""]
+    | Strings [String]
+    deriving Show
 
-    An identifier can be of any length, but only the first 255 characters
-are significant.
+-- | /EBNF:/
+--
+-- > constant = number | string | boolean ;
+data Constant
+    = NumericConstant Number
+    | TextConstant String
+    | BooleanConstant Bool
+    deriving Show
 
-    An identifier must begin with a letter or an underscore (_) and cannot 
-contain spaces; letters, digits, and underscores are allowed after
-the first character.
+-- | /EBNF:/
+--
+-- > alphanumeric = digit | letter;
+-- >
+-- > identifier = ('_' | letter), { '_' | alphanumeric };
+newtype Identifier
+    = Identifier T.Text
+    deriving Show
 
-    Reserved words cannot be used as identifiers. /Source: Delphi help/
+-- | /EBNF:/
+--
+-- > identifier-list = identifier, { ',', identifier };
+newtype IdentifierList
+    = IdentifierList [Identifier]
+    deriving Show
 
-/EBNF:/
+-- | /EBNF:/
+--
+-- > unit-identifier = identifier;
+newtype UnitIdentifier
+    = UnitIdentifier Identifier
+    deriving Show
 
-@
-    Identifier = [_a-zA-Z][_a-zA-Z0-9]*
-@
--}
-newtype Identifier = Identifier T.Text
+-- | /EBNF:/
+--
+-- > qualified-identifier = [ unit-identifier, '.' ], identifier;
+data QualifiedIdentifier
+    = QualifiedIdentifier (Maybe UnitIdentifier) Identifier
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > type-identifier = [ unit-id, '.' ], identifier;
+data TypeIdentifier
+    = TypeIdentifier (Maybe UnitIdentifier) Identifier
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > label-id = identifier | integer;
+data LabelIdentifier
+    = IdentifierLabel Identifier
+    | IntegerLabel Int
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > label-section = 'label', label-id;
+newtype LabelSection
+    = LabelSection LabelIdentifier
     deriving Show

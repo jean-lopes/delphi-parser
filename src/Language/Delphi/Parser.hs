@@ -1,12 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
+
+-- |
+-- Module      : Language.Delphi.Parser
+-- Description : Parsers for ASTs
+-- Copyright   : (c) Jean Carlo Giambastiani Lopes, 2017
+-- License     : MIT
+-- Maintainer  : jean.lopes@hotmail.com.br
+-- Stability   : experimental
 module Language.Delphi.Parser
 where
+import Numeric
 import Control.Monad (void)
 import Text.Megaparsec
 import Text.Megaparsec.Text
 import qualified Text.Megaparsec.Lexer as L
 import qualified Data.Text as T
-import Language.Delphi.AST
+import qualified Language.Delphi.AST as Delphi
 
 spaceConsumer :: Parser ()
 spaceConsumer = L.space (void spaceChar) line block
@@ -15,64 +24,76 @@ spaceConsumer = L.space (void spaceChar) line block
           parens_block = L.skipBlockComment "(*" "*)" 
           block = choice [curly_block, parens_block]
 
-lexeme :: Parser a -> Parser a
-lexeme = L.lexeme spaceConsumer
+lexeme :: String -> Parser a -> Parser a
+lexeme "" p = L.lexeme spaceConsumer p
+lexeme xs p = L.lexeme spaceConsumer $ label xs p
 
+signFunction :: Num a => a -> Char -> a
+signFunction n '-' = n * (-1)
+signFunction n _ = id n
+
+signed :: Num a => Parser a -> Parser a
+signed p = lexeme "sign" $ do
+    ss <- many (char '+' <|> char '-')
+    n <- p
+    return $ foldl signFunction n ss
+
+integer :: Parser Int
+integer = lexeme "integer" $ some digitChar >>= return . read
+
+real :: Parser Double
+real = lexeme "real" $ do
+    a <- integer
+    _ <- char '.'
+    b <- integer
+    return $ fromIntegral a + (fromIntegral b / 10)
+
+hexadecimal :: Parser Int
+hexadecimal = lexeme "hexadecimal" $ do    
+    _ <- char '$'
+    hs <- many hexDigitChar
+    return $ fst . head $ readHex hs
+
+scientific :: Parser Double
+scientific = lexeme "scientific number" $ do
+    let integerAsReal = integer >>= return . fromIntegral
+    m <- real <|> integerAsReal
+    _ <- char' 'e'
+    e <- signed integer
+    return $ m * 10 ^ e
+
+number :: Parser Delphi.Number
+number = lexeme "number" $ choice
+    [ try $ signed hexadecimal >>= return . Delphi.Hexadecimal
+    , try $ signed scientific >>= return . Delphi.Scientific
+    , try $ signed real >>= return . Delphi.Real
+    , signed integer >>= return . Delphi.Integer ]
+
+stringConstant :: Parser Delphi.String
+stringConstant = do
+    ws <- some (char '#' >> integer >>= return . fromIntegral)
+    return $ Delphi.StringConstant ws
+
+stringLiteralChar :: Parser Char
+stringLiteralChar = nonApostrophe <|> apostrophe
+    where apostrophe = char '\'' >> oneOf ['\'']
+          nonApostrophe = noneOf ['\'']
+
+stringLiteral :: Parser Delphi.String
+stringLiteral = do
+    _ <- char '\''
+    xs <- many $ try stringLiteralChar
+    _ <- char '\''
+    return $ Delphi.StringLiteral $ T.pack xs
+
+delphiString :: Parser Delphi.String
+delphiString = lexeme "string" $ p >>= return . Delphi.Strings
+    where p = some (stringConstant <|> stringLiteral)
+
+{-
 identifier :: Parser Identifier
 identifier = lexeme $ label "Identifier" $ do
     c <- choice [ char '_', letterChar ]
     cs <- many $ choice [ char '_', alphaNumChar ]
     return $ Identifier $ T.pack $ c:cs
-
-parseWithDefault :: a -> Parser a -> Parser a
-parseWithDefault d p = lexeme $ do
-    m <- optional p
-    case m of
-        Nothing  -> return d
-        (Just x) -> return x
-
-signed :: Num a => Parser a -> Parser a
-signed = L.signed spaceConsumer . lexeme
-
-signedInteger :: Parser Integer
-signedInteger = signed L.integer
-
-rationalInteger :: Parser Rational
-rationalInteger = L.integer >>= return . fromIntegral
-
-fractionalPart :: Parser Rational
-fractionalPart = char '.' >> (/10) <$> rationalInteger
-
-rational :: Parser Rational
-rational = do
-    i <- rationalInteger
-    f <- parseWithDefault 0 fractionalPart
-    return $ i + f
-
-{-
-signedReal :: Parser Rational
-signedReal = signed $ do
-    n <- rationalInteger
-    f <- fractionalPart
-    return $ n + f
-
---scientific :: Parser (Rational, Int)
-scientific :: Parser Rational
-scientific = lexeme $ do
-    mantissa <- signed rational
-    _ <- char' 'e'
-    e <- signedInteger >>= return . fromIntegral
-    return $ mantissa * 10 ^ e
-    --return (mantissa, e)
 -}
-
-hexadecimal :: Parser Integer
-hexadecimal = lexeme $ char '$' >> L.hexadecimal
-
-number :: Parser Number
-number = lexeme $ choice
-    [ try $ hexadecimal >>= return . Hexadecimal
-    --, try $ scientific >>= \(m, e) -> return $ Scientific m e
-    --, try $ scientific >>= return . Scientific
-    --, try $ signedReal >>= return . Real'
-    , signedInteger >>= return . Integer' ]

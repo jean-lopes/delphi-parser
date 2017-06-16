@@ -2,12 +2,12 @@
 module Language.Delphi(
     module Language.Delphi.AST,
     module Language.Delphi.Code,
-    module Language.Delphi.Parser,
+    --module Language.Delphi.Parser,
     testParser
 ) where
 import Language.Delphi.AST
 import Language.Delphi.Code
-import Language.Delphi.Parser
+--import Language.Delphi.Parser
 import Text.Megaparsec
 import Text.Megaparsec.Text
 

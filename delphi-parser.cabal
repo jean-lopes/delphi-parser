@@ -1,6 +1,6 @@
 name:                delphi-parser
 version:             0.1.0.0
-synopsis:            Delphi language parser
+synopsis:            Delphi 5 parser
 -- description:
 homepage:            https://github.com/jean-lopes/delphi-parser#readme
 license:             MIT
@@ -8,7 +8,7 @@ license-file:        LICENSE
 author:              Jean Carlo Giambastiani Lopes
 maintainer:          jean.lopes@hotmail.com.br
 copyright:           2017 Jean Carlo Giambastiani Lopes
-category:            undefined
+category:            Parser
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
@@ -16,24 +16,12 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Language.Delphi
-  other-modules:       Language.Delphi.AST
+                     , Language.Delphi.AST
                      , Language.Delphi.Parser
                      , Language.Delphi.Code                     
   build-depends:       base >= 4.7 && < 5
                      , text
                      , megaparsec
-  default-language:    Haskell2010
-
-test-suite delphi-parser-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Spec.hs
-  build-depends:       base
-                     , delphi-parser
-                     , text
-                     , megaparsec
-                     , QuickCheck
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
 source-repository head

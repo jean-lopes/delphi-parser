@@ -1,0 +1,425 @@
+property-specifiers = [ 'index', const-expr ]
+                    , [ 'read', identifier ]
+                    , [ 'write', identifier ]
+                    , [ 'stored', (identifier | constant) ]
+                    , [ ('default', const-expr) | 'nodefault' ]
+                    , [ 'implements', type-identifier ]
+                    ;
+
+property-parameter-list = '['
+                        , identifier-list
+                        , ':'
+                        , type-identifier
+                        , ';'
+                        , { identifier-list, ':', type-identifier }
+                        , ']'
+                        ;
+
+property-interface = [ property-parameter-list ]
+                   , ':'
+                   , identifier
+                   ;
+
+property-list = 'property'
+              , identifier
+              , [ property-interface ]
+              , property-specifiers
+              ;
+
+class-property = [ class-visibility ]
+               , property-list
+               , ';'
+               ;
+
+class-property-list = class-property, { class-property };
+
+interface-heritage = '(', identifier-list, ')';
+
+class-heritage = '(', identifier-list, ')';
+
+class-field = [ class-visibility ]
+            , object-field-list
+            , ';'
+            ;
+
+class-field-list = class-field, { class-field };
+
+class-method = [ class-visibility ]
+             , method-list
+             , ';'
+             ;
+
+class-method-list = class-method, { class-method };
+
+interface-type = 'interface'
+               , [ interface-heritage ],
+               , [ class-method-list ]
+               , [ class-property-list ]
+               , 'end'
+               ;
+
+class-type = 'class'
+           , [ class-heritage ]
+           , class-field-list
+           , class-method-list
+           , class-property-list
+           , 'end'
+           ;
+
+subrange-type = constant-expression, '..', constant-expression;
+
+enumerated-type = '(', identifier-list, ')';
+
+ordinal-type = subrange-type
+             | enumerated-type
+             | ordinal-identifier
+             ;
+
+simple-type = ordinal-type
+            | real-type
+            ;
+
+array-type = 'array'
+           , [ '[', ordinal-type, { ',', ordinal-type }, ']' ]
+           , 'of'
+           , type
+           ;
+
+record-variant = constant-expression, ',', { constant-expression, ',' }
+               , ':'
+               , '(', [ field-list ], ')'
+               ;
+
+variant-section = 'case'
+                , [ identifier, ':' ]
+                , type-identifier
+                , 'of'
+                , record-variant, ';', { record-variant, ';' }
+                ;
+
+field-declaration = identifier-list, ':', type;
+
+field-list = field-declaration, ';', { field-declaration, ';' }
+           , [ variant-section ]
+           , ';'
+           ;
+
+record-type = 'record', [ field-list ], 'end';
+
+set-type = 'set', 'of', ordinal-type;
+
+file-type = 'file', 'of', type-identifier;
+
+struct-type = [ 'packed' ]
+            , ( array-type | set-type | file-type | record-type );
+
+pointer-type = '^', type-identifier;
+
+string-type = 'string'
+            | 'ansistring'
+            | 'widestring'
+            | 'string', '[', constant-expression, ']'
+            ;
+
+class-reference-type = 'class', 'of', type-identifier;
+
+parameter = identifier-list, [ ':', ([ 'array', 'of' ], simple-type | 'string' | 'file') ] ]
+          | identifier, ':', simple-type, '=', constant-expression
+          ;
+
+formal-parameter = [ 'var' | 'const' | 'out' ], parameter;
+
+formal-parameters = '('
+                  , formal-parameter, ';', { formal-parameter, ';' }
+                  , ')'
+                  ;
+
+procedure-heading = 'procedure', identifier, [ formal-parameters ];
+
+function-heading = 'function', identifier, [ formal-parameters ], ':', (simple-type | 'string');
+
+procedure-type = ( procedure-heading | function-heading )
+               , [ 'of', 'object' ]
+               ;
+
+type = type-identifier
+     | simple-type
+     | struct-type
+     | pointer-type
+     | string-type
+     | procedure-type
+     | variant-type
+     | class-reference-type
+     ;
+
+
+object-heritage = '(', qualified-identifier, ')';
+
+object-field-list = identifier-list, ':', type, ';'
+                  , { identifier-list, ':', type, ';' }
+                  ;
+
+constructor-heading = 'constructor', identifier, [ formal-parameters ];
+
+constructor-heading = 'destructor', identifier, [ formal-parameters ];
+
+method-heading = procedure-heading
+               | function-heading
+               | constructor-heading
+               | destructor-heading
+               ;
+
+method-list = method-heading, [ ';', 'virtual' ], ';'
+            | { method-heading, [ ';', 'virtual' ], ';' }
+            ;
+
+object-type = 'object'
+            , [ object-heritage ]
+            , [ object-field-list ]
+            , [ method-list ]
+            , 'end'
+            ;
+
+restricted-type = object-type
+                | class-type
+                | interface-type
+                ;
+
+type-declaration = identifier, '=', type
+                 | identifier, '=', restricted-type
+                 ;
+
+type-section = 'type', type-declaration, ';', { type-declaration, ';' };
+
+array-constant = '('
+               , typed-constant, ',', { typed-constant, ',' }
+               , ')';
+
+record-field-constant = identifier, ':', typed-constant;
+
+record-constant = '('
+                , record-field-constant, ';', { record-field-constant, ';' }
+                , ')';
+
+typed-constant = constant-expression
+               | array-constant
+               | record-constant
+               ;
+
+constant-declaration = identifier, '=', constant-expression
+                     | identifier, ':', type-identifier, '=', typed-constant;
+
+const-section = 'const'
+              , constant-declaration, ';'
+              , { constant-declaration, ';' }
+              ;
+
+var-declaration = identifier-list
+                , ':'
+                , type
+                , [ ('absolute', (identifier | constant-expression))
+                  | '=', constant-expression 
+                  ]
+                ;
+
+var-section = 'var'
+            , var-declaration, ';', { var-declaration, ';' }
+            ;
+
+procedure-declaration = procedure-heading, ';', [ directive ]
+                      , block
+                      , ';'
+                      ;
+
+function-declaration = function-heading, ';',  [ directive ]
+                     , block
+                     , ';'
+                     ;
+                     
+procedure-section = procedure-declaration
+                  | function-declaration
+                  ;
+
+declaration-section = label-section
+                    | const-section
+                    | type-section
+                    | var-section
+                    | procedure-section
+                    ;
+
+set-constructor = '[', [ set-element, { ',', set-element } ], ']';
+
+set-element = expression, [ '..', expression ];
+
+factor = designator, [ '(', expression-list, ')' ]
+       | "''", designator
+       | number
+       | string
+       | 'nil'
+       | '(', expression, ')'
+       | 'not', factor
+       | set-constructor
+       | type-identifier, '(', expression, ')'
+       ;
+
+term = factor
+     , [ mul-op, factor ]
+     , { [ mul-op, factor ] };
+
+simple-expression = [ '+' | '-' ]
+                  , term
+                  , [ add-op, term ], { [ add-op, term ] }
+                  ;
+
+expression = simple-expression
+           , [ rel-op, simple-expression ], { [ rel-op, simple-expression ] }
+           ;
+
+constant-expression = expression; (* review: write a proper way to handle constant-expressions *)
+
+expression-list = expression, { ',', expression };
+
+designator = qualified-identifier
+           , [ '.', identifier | '[', expression-list, ']' | '^' ]
+           , { [ '.', identifier | '[', expression-list, ']' | '^' ] }           
+           ;
+
+simple-statement = designator, [ '(', expression-list, ')' ]
+                 | designator, ':=', expression
+                 | 'inherited'
+                 | 'goto', label-identifier
+                 ;
+
+if-statement = 'if'
+             , expression
+             , 'then'
+             , statement
+             , [ 'else', statement ]
+             ;
+
+case-label = constant-expression, [ '..', constant-expression ];
+
+case-selector = case-label, { ',', case-label }, ':', statement;
+
+case-statement = 'case'
+               , expression
+               , 'of'
+               , case-selector, { ';', case-selector }
+               , 'else'
+               , statement
+               , [ ';' ]
+               , 'end'
+               ;
+
+condition-statement = if-statement
+                    | case-statement
+                    ;
+
+repeat-statement = 'repeat', statement, 'until', expression;
+
+while-statement = 'while', expression, 'do', statement;
+
+for-statement = 'for'
+              , qualified-identifier
+              , ':='
+              , expression
+              , ('to' | 'downto')
+              , expression
+              , 'do'
+              , statement
+              ;
+
+loop-statement = repeat-statement
+               | while-statement
+               | for-statement
+               ;
+
+with-statement = 'with', identifier-list, 'do', statement;
+
+structured-statement = compound-statement
+                     | conditional-statement
+                     | loop-statement
+                     | with-statement
+                     ;
+
+statement = [ label-identifier, ':' ], [ simple-statement | structured-statement ]; (* review: this can make an empty statement, and this is illegal *)
+
+statement-list = statement, ';', { statement, ';' };
+
+compound-statement = 'begin', statement-list, 'end';
+
+block = [ declaration-section ]
+      , compound-statement;
+
+uses-clause = 'uses'
+            , identifier-list
+            , ';'
+            ;
+
+program-block = [ uses-clause ]
+              , block
+              ;
+
+init-section = 'initialization', statement-list , [ 'finalization', statement-list ], 'end'
+             | 'begin', statement-list, 'end'
+             | 'end'
+             ;
+
+implementation-section = 'implementation'
+                       , [ uses-clause ]
+                       , { declaration-section }
+                       ;
+
+exported-heading = procedure-heading, ';', [ directive ]
+                 | function-heading, ';', [ directive ]
+                 ;
+
+interface-declaration = const-section
+                      | type-section
+                      | var-section
+                      | exported-heading
+                      ;
+
+interface-section = 'interface'
+                  , [ uses-clause ]
+                  , { interface-declaration }
+                  ;
+
+unit = 'unit', identifier, ';'
+     , interface-section
+     , implementation-section
+     , init-section
+     ;
+
+program = [ 'program', identifier, [ '(', identifier-list , ')' ], ';' ]
+        , program-block
+        , '.'
+        ;
+
+library = 'library', identifier, ';'
+        , program-block
+        , '.'
+        ;
+
+requires-clause = 'requires'
+                , identifier-list
+                , ';'
+                ;
+
+contains-clause = 'contains'
+                , identifier-list
+                , ';'
+                ;
+
+package = 'package', identifier, ';'
+        , [ requires-clause ]
+        , [ contains-clause ]
+        , 'end'
+        , '.'
+        ;
+
+goal = program
+     | package
+     | library
+     | unit
+     ;
