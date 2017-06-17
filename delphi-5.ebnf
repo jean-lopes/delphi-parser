@@ -97,9 +97,13 @@ class-property = [ class-visibility ]
 
 class-property-list = class-property, { class-property };
 
-interface-heritage = '(', identifier-list, ')';
+heritage = '(', identifier-list, ')';
 
-class-heritage = '(', identifier-list, ')';
+interface-heritage = heritage;
+
+class-heritage = heritage;
+
+object-heritage = heritage;
 
 class-field = [ class-visibility ]
             , object-field-list
@@ -242,9 +246,6 @@ type = type-id
      | variant-type
      | class-reference-type
      ;
-
-
-object-heritage = '(', qualified-identifier, ')';
 
 object-field-list = identifier-list, ':', type, ';'
                   , { identifier-list, ':', type, ';' }

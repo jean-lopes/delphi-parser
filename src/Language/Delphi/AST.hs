@@ -17,92 +17,187 @@
 -- 
 -- /Base EBNF:/
 -- 
--- >character = ? any character ?;
+-- > character = ? any character ?;
 -- >            
--- >letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
--- >       | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' 
--- >       | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' 
--- >       | 's' | 't' | 'u' | 'v' | 'w' | 'x' 
--- >       | 'y' | 'z' ;
+-- > letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+-- >        | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' 
+-- >        | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' 
+-- >        | 's' | 't' | 'u' | 'v' | 'w' | 'x' 
+-- >        | 'y' | 'z' ;
 -- >
--- >digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+-- > digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 -- >
--- >sign = '+' | '-';
--- >
--- >class-visibility = 'public'
--- >                 | 'protected'
--- >                 | 'private'
--- >                 | 'published'
--- >                 ;
--- >
--- >ordinal-identifier = 'shortint'
--- >                   | 'smallint'
--- >                   | 'integer'
--- >                   | 'byte'
--- >                   | 'longint'
--- >                   | 'int64'
--- >                   | 'word'
--- >                   | 'boolean'
--- >                   | 'char'
--- >                   | 'widechar'
--- >                   | 'longword'
--- >                   | 'pchar'
--- >                   ;
--- >
--- >real-type = 'real48'
--- >          | 'real'
--- >          | 'single'
--- >          | 'double'
--- >          | 'extended'
--- >          | 'currency'
--- >          | 'comp'
--- >          ;
--- >
--- >variant-type = 'variant' | 'olevariant' ;
--- >
--- >directive = 'cddecl'
--- >          | 'register'
--- >          | 'dynamic'
--- >          | 'virtual'
--- >          | 'export'
--- >          | 'external'
--- >          | 'far'
--- >          | 'forward'
--- >          | 'message'
--- >          | 'override'
--- >          | 'overload'
--- >          | 'pascal'
--- >          | 'reintroduce'
--- >          | 'safecall'
--- >          | 'stdcall'
--- >          ;
--- >
--- >rel-op = '>' | '<' | '<=' | '>=' | '<>' | 'IN' | 'IS' | 'AS' ;
--- >
--- >add-op = '+' | '-' | 'or' | 'xor' ;
--- >
--- >mul-op = '*' | '/' | 'div' | 'mod' | 'and' | 'shl' | 'shr' ;
--- >
--- >boolean = 'true' | 'false' ;
+-- > sign = '+' | '-';
 module Language.Delphi.AST
 where
-import Prelude hiding (String)
+import Prelude(Show, Int, Double, Maybe, Bool)
 import Data.Word (Word8)
 import qualified Data.Text as T
 
 -- | /EBNF:/
 --
--- >integer = digit, { digit };
+-- > class-visibility = 'public'
+-- >                  | 'published'
+-- >                  | 'protected'
+-- >                  | 'private'
+-- >                  ;
+data ClassVisibility 
+    = Public
+    | Published
+    | Protected
+    | Private
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > ordinal-identifier = 'shortint' 
+-- >                    | 'smallint'
+-- >                    | 'integer'
+-- >                    | 'byte'
+-- >                    | 'longint'
+-- >                    | 'int64'
+-- >                    | 'word'
+-- >                    | 'boolean'
+-- >                    | 'char'
+-- >                    | 'widechar'
+-- >                    | 'longword'
+-- >                    | 'pchar'
+-- >                    ;
+data OrdinalIdentifier
+    = OrdIdShortInt
+    | OrdIdSmallInt
+    | OrdIdInteger
+    | OrdIdByte
+    | OrdIdLongInt
+    | OrdIdInt64
+    | OrdIdWord
+    | OrdIdBoolean
+    | OrdIdChar
+    | OrdIdWideChar
+    | OrdIdLongWord
+    | OrdIdPChar
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > real-type = 'real48'
+-- >           | 'real'
+-- >           | 'single'
+-- >           | 'double'
+-- >           | 'extended'
+-- >           | 'currency'
+-- >           | 'comp'
+-- >           ;
+data RealType
+    = RealTypeReal48
+    | RealTypeReal
+    | RealTypeSingle
+    | RealTypeDouble
+    | RealTypeExtended
+    | RealTypeCurrency
+    | RealTypeComp
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > variant-type = 'variant' | 'olevariant' ;
+data VariantType 
+    = Variant
+    | OleVariant
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > directive = 'cddecl'
+-- >           | 'register'
+-- >           | 'dynamic'
+-- >           | 'virtual'
+-- >           | 'export'
+-- >           | 'external'
+-- >           | 'far'
+-- >           | 'forward'
+-- >           | 'message'
+-- >           | 'override'
+-- >           | 'overload'
+-- >           | 'pascal'
+-- >           | 'reintroduce'
+-- >           | 'safecall'
+-- >           | 'stdcall'
+-- >           ;
+data Directive
+    = CdDecl
+    | Register
+    | Dynamic
+    | Virtual
+    | Export
+    | External
+    | Far
+    | Forward
+    | Message
+    | Override
+    | Overload
+    | Pascal
+    | Reintroduce
+    | SafeCall
+    | StdCall
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > rel-op = '>' | '<' | '<=' | '>=' | '<>' | 'IN' | 'IS' | 'AS' ;
+data RelOp
+    = Greater
+    | Lower
+    | LowerOrEqual
+    | GreaterOrEqual
+    | Different
+    | In
+    | Is
+    | As
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > add-op = '+' | '-' | 'or' | 'xor' ;
+data AddOp
+    = Plus
+    | Minus
+    | Or
+    | Xor
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > mul-op = '*' | '/' | 'div' | 'mod' | 'and' | 'shl' | 'shr' ;
+data MulOp
+    = Multiplication
+    | Division
+    | Div
+    | Mod
+    | And
+    | Shl
+    | Shr
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > boolean = 'true' | 'false' ;
+newtype Boolean = Boolean Bool
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > integer = digit, { digit };
 -- >
--- >hexadecimal-digit = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f';
+-- > hexadecimal-digit = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f';
 -- >
--- >hexadecimal = '$', hexadecimal-digit, { hexadecimal-digit };
+-- > hexadecimal = '$', hexadecimal-digit, { hexadecimal-digit };
 -- >
--- >real = integer, '.', integer;
+-- > real = integer, '.', integer;
 -- >
--- >scientific = real, 'e', [ sign ], integer;
+-- > scientific = real, 'e', [ sign ], integer;
 -- >
--- >number = { sign }, ( hexadecimal | scientific | real | integer );
+-- > number = { sign }, ( hexadecimal | scientific | real | integer );
 data Number
     -- | Hexadecimal number, examples:
     --
@@ -124,7 +219,7 @@ data Number
 
 -- | /EBNF:/
 --
--- >character-constant = '#', digit, { digit };
+-- > character-constant = '#', digit, { digit };
 -- >
 -- > string-constant = character-constant, { character-constant };
 -- >
@@ -160,9 +255,9 @@ data String
 --
 -- > constant = number | string | boolean ;
 data Constant
-    = NumericConstant Number
-    | TextConstant String
-    | BooleanConstant Bool
+    = NumericConstant !Number
+    | TextConstant !String
+    | BooleanConstant !Boolean
     deriving Show
 
 -- | /EBNF:/
