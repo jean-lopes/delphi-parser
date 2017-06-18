@@ -7,11 +7,8 @@ property-specifiers = [ 'index', const-expr ]
                     ;
 
 property-parameter-list = '['
-                        , identifier-list
-                        , ':'
-                        , type-identifier
-                        , ';'
-                        , { identifier-list, ':', type-identifier }
+                        , identifier-list, ':', type-identifier
+                        , { ';', identifier-list, ':', type-identifier }
                         , ']'
                         ;
 
@@ -89,7 +86,7 @@ array-type = 'array'
            , type
            ;
 
-record-variant = constant-expression, ',', { constant-expression, ',' }
+record-variant = constant-expression, { ',', constant-expression }
                , ':'
                , '(', [ field-list ], ')'
                ;
@@ -98,14 +95,14 @@ variant-section = 'case'
                 , [ identifier, ':' ]
                 , type-identifier
                 , 'of'
-                , record-variant, ';', { record-variant, ';' }
+                , record-variant, { ';', record-variant }
                 ;
 
 field-declaration = identifier-list, ':', type;
 
-field-list = field-declaration, ';', { field-declaration, ';' }
+field-list = field-declaration, { ';', field-declaration }
            , [ variant-section ]
-           , ';'
+           , [ ';' ]
            ;
 
 record-type = 'record', [ field-list ], 'end';
@@ -133,10 +130,7 @@ parameter = identifier-list, [ ':', ([ 'array', 'of' ], simple-type | 'string' |
 
 formal-parameter = [ 'var' | 'const' | 'out' ], parameter;
 
-formal-parameters = '('
-                  , formal-parameter, ';', { formal-parameter, ';' }
-                  , ')'
-                  ;
+formal-parameters = '(', formal-parameter, { ';', formal-parameter }, ')';
 
 procedure-heading = 'procedure', identifier, [ formal-parameters ];
 
@@ -156,8 +150,8 @@ type = type-identifier
      | class-reference-type
      ;
 
-object-field-list = identifier-list, ':', type, ';'
-                  , { identifier-list, ':', type, ';' }
+object-field-list = identifier-list, ':', type
+                  , { ';', identifier-list, ':', type }
                   ;
 
 constructor-heading = 'constructor', identifier, [ formal-parameters ];
@@ -192,14 +186,12 @@ type-declaration = identifier, '=', type
 
 type-section = 'type', type-declaration, ';', { type-declaration, ';' };
 
-array-constant = '('
-               , typed-constant, ',', { typed-constant, ',' }
-               , ')';
+array-constant = '(', typed-constant, { ',', typed-constant }, ')';
 
 record-field-constant = identifier, ':', typed-constant;
 
 record-constant = '('
-                , record-field-constant, ';', { record-field-constant, ';' }
+                , record-field-constant,  { ';', record-field-constant }
                 , ')';
 
 typed-constant = constant-expression
@@ -211,8 +203,7 @@ constant-declaration = identifier, '=', constant-expression
                      | identifier, ':', type-identifier, '=', typed-constant;
 
 const-section = 'const'
-              , constant-declaration, ';'
-              , { constant-declaration, ';' }
+              , constant-declaration, ';', { constant-declaration, ';' }
               ;
 
 var-declaration = identifier-list
@@ -247,43 +238,6 @@ declaration-section = label-section
                     | var-section
                     | procedure-section
                     ;
-
-set-constructor = '[', [ set-element, { ',', set-element } ], ']';
-
-set-element = expression, [ '..', expression ];
-
-factor = designator, [ '(', expression-list, ')' ]
-       | "''", designator
-       | number
-       | string
-       | 'nil'
-       | '(', expression, ')'
-       | 'not', factor
-       | set-constructor
-       | type-identifier, '(', expression, ')'
-       ;
-
-term = factor
-     , [ mul-op, factor ]
-     , { [ mul-op, factor ] };
-
-simple-expression = [ '+' | '-' ]
-                  , term
-                  , [ add-op, term ], { [ add-op, term ] }
-                  ;
-
-expression = simple-expression
-           , [ rel-op, simple-expression ], { [ rel-op, simple-expression ] }
-           ;
-
-constant-expression = expression; (* review: write a proper way to handle constant-expressions *)
-
-expression-list = expression, { ',', expression };
-
-designator = qualified-identifier
-           , [ '.', identifier | '[', expression-list, ']' | '^' ]
-           , { [ '.', identifier | '[', expression-list, ']' | '^' ] }           
-           ;
 
 simple-statement = designator, [ '(', expression-list, ')' ]
                  | designator, ':=', expression
@@ -345,7 +299,7 @@ structured-statement = compound-statement
 
 statement = [ label-identifier, ':' ], [ simple-statement | structured-statement ]; (* review: this can make an empty statement, and this is illegal *)
 
-statement-list = statement, ';', { statement, ';' };
+statement-list = statement, { ';', statement };
 
 compound-statement = 'begin', statement-list, 'end';
 

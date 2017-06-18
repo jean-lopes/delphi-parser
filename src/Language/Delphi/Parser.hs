@@ -32,6 +32,9 @@ lexemeL :: String -> Parser a -> Parser a
 lexemeL "" p = lexeme p
 lexemeL xs p = lexeme $ label xs p
 
+-- | Apply a parser between parentheses
+parens :: Parser a -> Parser a
+parens p = between (char '(') (char ')') p
 
 stringToData :: [(String, a)] -> Parser a
 stringToData xs = choice $ map (\(t, x) -> string' t >> return x) xs
@@ -206,12 +209,8 @@ identifier = lexemeL "identifier" $ do
     cs <- many $ choice [ char '_', alphaNumChar ]
     return $ Delphi.Identifier $ T.pack $ c:cs
 
-parens :: Parser a -> Parser a
-parens p = between (char '(') (char ')') p
-
 identifierList :: Parser Delphi.IdentifierList
-identifierList = lexeme $ 
-    parens $ do
+identifierList = lexeme $ do
         first <- identifier
         others <- many $ do
             _ <- lexeme $ char ','
@@ -249,3 +248,4 @@ labelIdentifier = lexeme $ choice
 
 labelSection :: Parser Delphi.LabelSection
 labelSection = lexeme $ labelIdentifier >>= return . Delphi.LabelSection
+

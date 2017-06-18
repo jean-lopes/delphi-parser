@@ -6,7 +6,7 @@ homepage:            https://github.com/jean-lopes/delphi-parser#readme
 license:             MIT
 license-file:        LICENSE
 author:              Jean Carlo Giambastiani Lopes
-maintainer:          jean.lopes@hotmail.com.br
+maintainer:          Jean Carlo Giambastiani Lopes <jean.lopes@hotmail.com.br>
 copyright:           2017 Jean Carlo Giambastiani Lopes
 category:            Parser
 build-type:          Simple
@@ -18,7 +18,7 @@ library
   exposed-modules:     Language.Delphi
                      , Language.Delphi.AST
                      , Language.Delphi.Parser
-                     , Language.Delphi.Code                     
+                     , Language.Delphi.Code
   build-depends:       base >= 4.7 && < 5
                      , text
                      , megaparsec

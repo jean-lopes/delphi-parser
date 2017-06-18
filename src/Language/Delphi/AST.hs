@@ -26,13 +26,20 @@
 -- >        | 'y' | 'z' ;
 -- >
 -- > digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
--- >
--- > sign = '+' | '-';
 module Language.Delphi.AST
 where
 import Prelude(Show, Int, Double, Maybe, Bool)
 import Data.Word (Word8)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Text as T
+
+-- | /EBNF:/
+--
+-- > sign = '+' | '-';
+data Sign
+    = PlusSign
+    | MinusSign
+    deriving Show
 
 -- | /EBNF:/
 --
@@ -234,7 +241,7 @@ data String
     -- > #65       -> A
     -- > #89       -> Y
     -- > #65#89#89 -> AYY
-    = StringConstant [Word8]
+    = StringConstant (NonEmpty Word8)
     -- | A String literal, is your common quoted string, the only escaped
     --   character is the apostrophe, examples:
     --
@@ -248,7 +255,7 @@ data String
     -- > 'AYYY'#32'LMAO' -> Strings [ StringLiteral ""
     -- >                            , StringConstant [32]
     -- >                            , StringLiteral ""]
-    | Strings [String]
+    | Strings (NonEmpty String)
     deriving Show
 
 -- | /EBNF:/
@@ -273,7 +280,7 @@ newtype Identifier
 --
 -- > identifier-list = identifier, { ',', identifier };
 newtype IdentifierList
-    = IdentifierList [Identifier]
+    = IdentifierList (NonEmpty Identifier)
     deriving Show
 
 -- | /EBNF:/
@@ -310,4 +317,97 @@ data LabelIdentifier
 -- > label-section = 'label', label-id;
 newtype LabelSection
     = LabelSection LabelIdentifier
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > set-element = expression, [ '..', expression ];
+data SetElement
+    = SingleElement Expression
+    | Range Expression Expression
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > set-constructor = '[', [ set-element, { ',', set-element } ], ']';
+data SetConstructor
+    = SetConstructor (NonEmpty SetElement)
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > factor = designator, [ '(', expression-list, ')' ]
+-- >       | "''", designator (* what sorcery is this? *)
+-- >       | number
+-- >       | string
+-- >       | 'nil'
+-- >       | '(', expression, ')'
+-- >       | 'not', factor
+-- >       | set-constructor
+-- >       | type-identifier, '(', expression, ')'
+-- >       ;
+data Factor
+    = DesignatorFactor Designator
+    | NumericFactor Number
+    | TextFactor String
+    | Nil
+    | ExpressionFactor
+    | NotFactor
+    | SetFactor SetConstructor
+    | TypeFactor TypeIdentifier Expression
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > term = factor, { mul-op, factor };
+data Term = Term Factor [(MulOp, Factor)]
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > simple-expression = [ sign ], term, { add-op, term };
+data SimpleExpression
+    = SimpleExpression Sign Term [(AddOp, Term)]
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > expression = simple-expression, { rel-op, simple-expression }
+-- >           ;
+data Expression
+    = Expression SimpleExpression [(RelOp, SimpleExpression)]
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > expression-list = expression, { ',', expression };
+newtype ExpressionList
+    = ExpressionList (NonEmpty Expression)
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > designator-item = '.', identifier 
+-- >                | '[', expression-list, ']'
+-- >                | '^'
+-- >                ; 
+data DesignatorItem
+    = IdentifierDesignator Identifier
+    | ExpressionListDesignator ExpressionList
+    | PointerDesignator
+    deriving Show
+
+-- > designator = qualified-identifier
+-- >            , { designator-item }           
+-- >            ;
+data Designator
+    = Designator QualifiedIdentifier (NonEmpty DesignatorItem)
+    deriving Show
+
+-- | /EBNF:/
+--
+-- > (* review: write a proper way to handle constant-expressions *)
+-- > constant-expression = expression;
+newtype ConstantExpression
+    = ConstantExpression Expression
     deriving Show
