@@ -37,8 +37,8 @@ import qualified Data.Text as T
 --
 -- > sign = '+' | '-';
 data Sign
-    = PlusSign
-    | MinusSign
+    = Plus
+    | Minus
     deriving Show
 
 -- | /EBNF:/
@@ -165,10 +165,9 @@ data RelOp
 
 -- | /EBNF:/
 --
--- > add-op = '+' | '-' | 'or' | 'xor' ;
+-- > add-op = sign | 'or' | 'xor' ;
 data AddOp
-    = Plus
-    | Minus
+    = SignOp !Sign
     | Or
     | Xor
     deriving Show
@@ -252,9 +251,9 @@ data String
     | StringLiteral !T.Text
     -- | The string types can be mixed, hence this constructor, examples:
     --
-    -- > 'AYYY'#32'LMAO' -> Strings [ StringLiteral ""
+    -- > 'AYYY'#32'LMAO' -> Strings [ StringLiteral "AYYY"
     -- >                            , StringConstant [32]
-    -- >                            , StringLiteral ""]
+    -- >                            , StringLiteral "LMAO"]
     | Strings (NonEmpty String)
     deriving Show
 
@@ -294,22 +293,22 @@ newtype UnitIdentifier
 --
 -- > qualified-identifier = [ unit-identifier, '.' ], identifier;
 data QualifiedIdentifier
-    = QualifiedIdentifier (Maybe UnitIdentifier) Identifier
+    = QualifiedIdentifier !(Maybe UnitIdentifier) !Identifier
     deriving Show
 
 -- | /EBNF:/
 --
 -- > type-identifier = [ unit-id, '.' ], identifier;
 data TypeIdentifier
-    = TypeIdentifier (Maybe UnitIdentifier) Identifier
+    = TypeIdentifier !(Maybe UnitIdentifier) !Identifier
     deriving Show
 
 -- | /EBNF:/
 --
 -- > label-id = identifier | integer;
 data LabelIdentifier
-    = IdentifierLabel Identifier
-    | IntegerLabel Int
+    = IdentifierLabel !Identifier
+    | IntegerLabel !Int
     deriving Show
 
 -- | /EBNF:/
@@ -323,15 +322,15 @@ newtype LabelSection
 --
 -- > set-element = expression, [ '..', expression ];
 data SetElement
-    = SingleElement Expression
-    | Range Expression Expression
+    = SingleElement !Expression
+    | RangeElement !Expression !Expression
     deriving Show
 
 -- | /EBNF:/
 --
 -- > set-constructor = '[', [ set-element, { ',', set-element } ], ']';
-data SetConstructor
-    = SetConstructor (NonEmpty SetElement)
+newtype SetConstructor
+    = SetConstructor [SetElement]
     deriving Show
 
 -- | /EBNF:/
@@ -346,28 +345,29 @@ data SetConstructor
 -- >       | set-constructor
 -- >       | type-identifier, '(', expression, ')'
 -- >       ;
+-- Where are the boolean values?
 data Factor
-    = DesignatorFactor Designator
-    | NumericFactor Number
-    | TextFactor String
+    = DesignatorFactor !Designator (Maybe ExpressionList)
+    | NumericFactor !Number
+    | TextFactor !String
     | Nil
-    | ExpressionFactor
-    | NotFactor
-    | SetFactor SetConstructor
-    | TypeFactor TypeIdentifier Expression
+    | ExpressionFactor !Expression
+    | NotFactor !Factor
+    | SetFactor !SetConstructor
+    | TypeFactor !TypeIdentifier !Expression
     deriving Show
 
 -- | /EBNF:/
 --
 -- > term = factor, { mul-op, factor };
-data Term = Term Factor [(MulOp, Factor)]
+data Term = Term !Factor [(MulOp, Factor)]
     deriving Show
 
 -- | /EBNF:/
 --
 -- > simple-expression = [ sign ], term, { add-op, term };
 data SimpleExpression
-    = SimpleExpression Sign Term [(AddOp, Term)]
+    = SimpleExpression !(Maybe Sign) !Term [(AddOp, Term)]
     deriving Show
 
 -- | /EBNF:/
@@ -375,7 +375,7 @@ data SimpleExpression
 -- > expression = simple-expression, { rel-op, simple-expression }
 -- >           ;
 data Expression
-    = Expression SimpleExpression [(RelOp, SimpleExpression)]
+    = Expression !SimpleExpression [(RelOp, SimpleExpression)]
     deriving Show
 
 -- | /EBNF:/
@@ -392,16 +392,16 @@ newtype ExpressionList
 -- >                | '^'
 -- >                ; 
 data DesignatorItem
-    = IdentifierDesignator Identifier
-    | ExpressionListDesignator ExpressionList
+    = IdentifierDesignator !Identifier
+    | ExpressionListDesignator !ExpressionList
     | PointerDesignator
     deriving Show
 
--- > designator = qualified-identifier
--- >            , { designator-item }           
--- >            ;
+-- | /EBNF:/
+--
+-- > designator = qualified-identifier, { designator-item };
 data Designator
-    = Designator QualifiedIdentifier (NonEmpty DesignatorItem)
+    = Designator !QualifiedIdentifier ![DesignatorItem]
     deriving Show
 
 -- | /EBNF:/

@@ -21,6 +21,7 @@ library
                      , Language.Delphi.Code
   build-depends:       base >= 4.7 && < 5
                      , text
+                     , lens
                      , megaparsec
   default-language:    Haskell2010
 

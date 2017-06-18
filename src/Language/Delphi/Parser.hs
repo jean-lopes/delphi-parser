@@ -11,6 +11,7 @@ module Language.Delphi.Parser
 where
 import Numeric
 import Control.Monad (void)
+import Data.List.NonEmpty (NonEmpty(..))
 import Text.Megaparsec
 import Text.Megaparsec.Text
 import qualified Text.Megaparsec.Lexer as L
@@ -34,11 +35,22 @@ lexemeL xs p = lexeme $ label xs p
 
 -- | Apply a parser between parentheses
 parens :: Parser a -> Parser a
-parens p = between (char '(') (char ')') p
+parens p = between (openClose '(') (openClose ')') p
+    where openClose = lexeme . char
+
+-- | Apply a parser between brackets
+brackets :: Parser a -> Parser a
+brackets p = between (openClose '[') (openClose ']') p
+    where openClose = lexeme . char
 
 stringToData :: [(String, a)] -> Parser a
 stringToData xs = choice $ map (\(t, x) -> string' t >> return x) xs
     
+sign :: Parser Delphi.Sign
+sign = lexeme $ stringToData
+    [ ("+", Delphi.Plus) 
+    , ("-", Delphi.Minus) ]
+
 classVisibility :: Parser Delphi.ClassVisibility
 classVisibility = lexeme $ stringToData
     [ ("public"   , Delphi.Public)
@@ -112,10 +124,8 @@ relOp = lexeme $ stringToData
     ]
 
 addOp :: Parser Delphi.AddOp
-addOp = lexeme $ stringToData
-    [ ("+"  , Delphi.Plus)
-    , ("-"  , Delphi.Minus)
-    , ("or" , Delphi.Or)
+addOp = lexeme $ (sign >>= return . Delphi.SignOp) <|> stringToData
+    [ ("or" , Delphi.Or)
     , ("xor", Delphi.Xor)
     ]
 
@@ -179,8 +189,8 @@ number = lexemeL "number" $ choice
 
 stringConstant :: Parser Delphi.String
 stringConstant = do
-    ws <- some (char '#' >> integer <|> hexadecimal >>= return . fromIntegral)
-    return $ Delphi.StringConstant ws
+    (w:ws) <- some (char '#' >> integer <|> hexadecimal >>= return . fromIntegral)
+    return $ Delphi.StringConstant $ w :| ws
 
 stringLiteralChar :: Parser Char
 stringLiteralChar = nonApostrophe <|> apostrophe
@@ -193,7 +203,7 @@ stringLiteral = between (char '\'') (char '\'') $ do
     return $ Delphi.StringLiteral $ T.pack xs
 
 delphiString :: Parser Delphi.String
-delphiString = lexemeL "string" $ p >>= return . Delphi.Strings
+delphiString = lexemeL "string" $ p >>= \(x:xs) -> return $ Delphi.Strings $ x :| xs
     where p = some (stringConstant <|> stringLiteral)
 
 constant :: Parser Delphi.Constant
@@ -215,10 +225,10 @@ identifierList = lexeme $ do
         others <- many $ do
             _ <- lexeme $ char ','
             identifier
-        return $ Delphi.IdentifierList $ first:others
+        return $ Delphi.IdentifierList $ first :| others
 
 unitIdentifier :: Parser Delphi.UnitIdentifier
-unitIdentifier = lexemeL "unit identifier" $
+unitIdentifier = lexeme $
     identifier >>= return . Delphi.UnitIdentifier
 
 optionalUnitIdAndIdentifier :: Parser (Maybe Delphi.UnitIdentifier, Delphi.Identifier)
@@ -247,5 +257,92 @@ labelIdentifier = lexeme $ choice
     ]
 
 labelSection :: Parser Delphi.LabelSection
-labelSection = lexeme $ labelIdentifier >>= return . Delphi.LabelSection
+labelSection = lexeme $ 
+    string' "label" >> labelIdentifier >>= return . Delphi.LabelSection
 
+singleElement :: Parser Delphi.SetElement
+singleElement = lexeme $ expression >>= return . Delphi.SingleElement
+
+rangeElement :: Parser Delphi.SetElement
+rangeElement = lexeme $ do
+    a <- expression
+    _ <- string ".."
+    b <- expression
+    return $ Delphi.RangeElement a b
+
+setElement :: Parser Delphi.SetElement
+setElement = lexeme $ try rangeElement <|> singleElement
+
+setConstructor :: Parser Delphi.SetConstructor
+setConstructor = lexeme $ brackets $
+    many setElement >>= return . Delphi.SetConstructor
+
+designatorFactor :: Parser Delphi.Factor
+designatorFactor = lexeme $ do
+    d <- designator
+    es <- optional expressionList
+    return $ Delphi.DesignatorFactor d es
+
+factor :: Parser Delphi.Factor
+factor = lexeme $ choice
+    [ string' "nil" >> return Delphi.Nil
+    , try $ string' "not" >> factor >>= return . Delphi.NotFactor
+    , try $ number >>= return . Delphi.NumericFactor
+    , try $ delphiString >>= return . Delphi.TextFactor
+    , try $ parens expression >>= return . Delphi.ExpressionFactor    
+    , try $ setConstructor >>= return . Delphi.SetFactor
+    , try designatorFactor
+    , typeIdentifier >>= \t -> expression >>= return . Delphi.TypeFactor t
+    ]
+
+term :: Parser Delphi.Term
+term = lexeme $ do
+    f <- factor
+    xs <- many $ do
+        a <- mulOp
+        b <- factor
+        return (a, b)
+    return $ Delphi.Term f xs
+
+simpleExpression :: Parser Delphi.SimpleExpression
+simpleExpression = lexeme $ do
+    s <- optional sign
+    t <- term
+    xs <- many $ do
+        a <- addOp
+        b <- term
+        return (a, b)
+    return $ Delphi.SimpleExpression s t xs
+
+expression :: Parser Delphi.Expression
+expression = lexeme $ do
+    s <- simpleExpression
+    xs <- many $ do
+        a <- relOp
+        b <- simpleExpression
+        return (a, b)
+    return $ Delphi.Expression s xs
+
+expressionList :: Parser Delphi.ExpressionList
+expressionList = lexeme $ do
+    (e:es) <- some $ do
+        _ <- optional $ char ','
+        x <- expression
+        return x
+    return $ Delphi.ExpressionList $ e :| es
+
+designatorItem :: Parser Delphi.DesignatorItem
+designatorItem = lexeme $ choice
+    [ try $ identifier >>= return . Delphi.IdentifierDesignator 
+    , try $ brackets expressionList >>= return . Delphi.ExpressionListDesignator
+    , char '^' >> return Delphi.PointerDesignator
+    ]
+
+designator :: Parser Delphi.Designator
+designator = lexeme $ do
+    q <- qualifiedIdentifier
+    ds <- many designatorItem
+    return $ Delphi.Designator q ds
+
+constantExpression :: Parser Delphi.ConstantExpression
+constantExpression = lexeme $ expression >>= return . Delphi.ConstantExpression
