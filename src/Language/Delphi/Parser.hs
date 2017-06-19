@@ -11,7 +11,9 @@ module Language.Delphi.Parser
 where
 import Numeric
 import Control.Monad (void)
-import Data.List.NonEmpty (NonEmpty(..))
+import Data.List.NonEmpty (NonEmpty(..), fromList)
+import Data.List (sort)
+import Data.Char (toLower)
 import Text.Megaparsec
 import Text.Megaparsec.Text
 import qualified Text.Megaparsec.Lexer as L
@@ -20,32 +22,68 @@ import qualified Language.Delphi.AST as Delphi
 
 spaceConsumer :: Parser ()
 spaceConsumer = L.space (void spaceChar) line block
-    where line = L.skipLineComment "\\\\"
-          curly_block = L.skipBlockComment "{" "}"
-          parens_block = L.skipBlockComment "(*" "*)" 
-          block = choice [curly_block, parens_block]
+    where 
+        line = L.skipLineComment "\\\\"
+        curlyBlock = L.skipBlockComment "{" "}"
+        parensBlock = L.skipBlockComment "(*" "*)" 
+        block = choice [curlyBlock, parensBlock]
 
 lexeme :: Parser a -> Parser a
 lexeme p = L.lexeme spaceConsumer p
 
--- | Labeled lexeme
-lexemeL :: String -> Parser a -> Parser a
-lexemeL "" p = lexeme p
-lexemeL xs p = lexeme $ label xs p
-
 -- | Apply a parser between parentheses
 parens :: Parser a -> Parser a
 parens p = between (openClose '(') (openClose ')') p
-    where openClose = lexeme . char
+    where
+        openClose = lexeme . char
 
 -- | Apply a parser between brackets
 brackets :: Parser a -> Parser a
 brackets p = between (openClose '[') (openClose ']') p
-    where openClose = lexeme . char
+    where
+        openClose = lexeme . char
 
 stringToData :: [(String, a)] -> Parser a
 stringToData xs = choice $ map (\(t, x) -> string' t >> return x) xs
     
+-- failOnReservedWord :: Parser a -> Parser a
+-- failOnReservedWord p = lexeme $ cs <|> p
+--     where 
+--         er = unexpected . Label . fromList
+--         cs = choice $ map (\s -> string' s >>= er) xs
+
+reserved :: [String]
+reserved = sort $ map (map toLower)
+    [ "and" , "array", "as", "asm", "begin", "case", "class", "const"
+    , "constructor", "destructor", "dispinterface", "div", "do"
+    , "except", "exports", "file", "finalization", "finally", "for"
+    , "function", "goto", "if", "implementation", "in"  , "inherited"
+    , "initialization", "inline", "interface", "is", "label"
+    , "library", "mod", "nil", "not", "object", "of", "or", "out"
+    , "packed", "procedure", "program", "property", "resourcestring"
+    , "set", "shl", "shr", "string", "then", "threadvar", "to", "try"
+    , "type", "unit", "until", "uses", "var", "while", "with", "xor"
+    , "private", "protected", "public", "published", "automated", "at", "on"
+    ]
+
+isReserved :: String -> Bool
+isReserved ident = scan reserved
+    where
+        scan [] = False
+        scan (r:rs) = case (compare r ident) of
+            LT -> scan rs
+            EQ -> True
+            GT -> False
+
+identifier :: Parser Delphi.Identifier
+identifier = lexeme $ label "identifier" $ do
+    c <- choice [ char '_', letterChar ]
+    cs <- many $ choice [ char '_', alphaNumChar ]
+    let name = c:cs
+    if isReserved name
+        then unexpected . Label $ fromList $ "reserved word: " ++ name
+        else return . Delphi.Identifier $ T.pack name
+
 sign :: Parser Delphi.Sign
 sign = lexeme $ stringToData
     [ ("+", Delphi.Plus) 
@@ -151,29 +189,29 @@ signFunction n '-' = n * (-1)
 signFunction n _ = id n
 
 signed :: Num a => Parser a -> Parser a
-signed p = lexemeL "sign" $ do
+signed p = lexeme $ label "sign" $ do
     ss <- many (char '+' <|> char '-')
     n <- p
     return $ foldl signFunction n ss
 
 integer :: Parser Int
-integer = lexemeL "integer" $ some digitChar >>= return . read
+integer = lexeme $ label "integer" $ some digitChar >>= return . read
 
 real :: Parser Double
-real = lexemeL "real" $ do
+real = lexeme $ label "real" $ do
     a <- integer
     _ <- char '.'
     b <- integer
     return $ fromIntegral a + (fromIntegral b / 10)
 
 hexadecimal :: Parser Int
-hexadecimal = lexemeL "hexadecimal" $ do    
+hexadecimal = lexeme $ label "hexadecimal" $ do    
     _ <- char '$'
     hs <- many hexDigitChar
     return $ fst . head $ readHex hs
 
 scientific :: Parser Double
-scientific = lexemeL "scientific number" $ do
+scientific = lexeme $ label "scientific number" $ do
     let integerAsReal = integer >>= return . fromIntegral
     m <- real <|> integerAsReal
     _ <- char' 'e'
@@ -181,7 +219,7 @@ scientific = lexemeL "scientific number" $ do
     return $ m * 10 ^ e
 
 number :: Parser Delphi.Number
-number = lexemeL "number" $ choice
+number = lexeme $ label "number" $ choice
     [ try $ signed hexadecimal >>= return . Delphi.Hexadecimal
     , try $ signed scientific >>= return . Delphi.Scientific
     , try $ signed real >>= return . Delphi.Real
@@ -203,21 +241,15 @@ stringLiteral = between (char '\'') (char '\'') $ do
     return $ Delphi.StringLiteral $ T.pack xs
 
 delphiString :: Parser Delphi.String
-delphiString = lexemeL "string" $ p >>= \(x:xs) -> return $ Delphi.Strings $ x :| xs
+delphiString = lexeme $ label "string" $ p >>= \(x:xs) -> return $ Delphi.Strings $ x :| xs
     where p = some (stringConstant <|> stringLiteral)
 
 constant :: Parser Delphi.Constant
-constant = lexemeL "constant" $ choice
+constant = lexeme $ label "constant" $ choice
     [ number >>= return . Delphi.NumericConstant
     , delphiString >>= return . Delphi.TextConstant
     , boolean >>= return . Delphi.BooleanConstant
     ]
-
-identifier :: Parser Delphi.Identifier
-identifier = lexemeL "identifier" $ do
-    c <- choice [ char '_', letterChar ]
-    cs <- many $ choice [ char '_', alphaNumChar ]
-    return $ Delphi.Identifier $ T.pack $ c:cs
 
 identifierList :: Parser Delphi.IdentifierList
 identifierList = lexeme $ do

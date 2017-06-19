@@ -26,6 +26,19 @@
 -- >        | 'y' | 'z' ;
 -- >
 -- > digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+-- >
+-- > reserved = 'and' | 'array' | 'as' | 'asm' | 'begin' | 'case' | 'class' 
+-- >          | 'const' | 'constructor' | 'destructor' | 'dispinterface' | 'div' 
+-- >          | 'do' | 'except' | 'exports' | 'file' | 'finalization' | 'finally'
+-- >          | 'for' | 'function' | 'goto' | 'if' | 'implementation' | 'in' 
+-- >          | 'inherited' | 'initialization' | 'inline' | 'interface' | 'is'
+-- >          | 'label' | 'library' | 'mod' | 'nil' | 'not' | 'object' | 'of'
+-- >          | 'or' | 'out' | 'packed' | 'procedure' | 'program' | 'property'
+-- >          | 'resourcestring' | 'set' | 'shl' | 'shr' | 'string' | 'then'
+-- >          | 'threadvar' | 'to' | 'try' | 'type' | 'unit' | 'until' | 'uses'
+-- >          | 'var' | 'while' | 'with' | 'xor'
+-- >          ;
+-- >
 module Language.Delphi.AST
 where
 import Prelude(Show, Int, Double, Maybe, Bool)
@@ -336,7 +349,7 @@ newtype SetConstructor
 -- | /EBNF:/
 --
 -- > factor = designator, [ '(', expression-list, ')' ]
--- >       | "''", designator (* what sorcery is this? *)
+-- >       | '@', designator
 -- >       | number
 -- >       | string
 -- >       | 'nil'
@@ -348,6 +361,7 @@ newtype SetConstructor
 -- Where are the boolean values?
 data Factor
     = DesignatorFactor !Designator (Maybe ExpressionList)
+    | AddressFactor !Designator
     | NumericFactor !Number
     | TextFactor !String
     | Nil
